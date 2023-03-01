@@ -37,8 +37,9 @@ class Spider(Spider):  # 元类 默认的元类 type
 			return self.fhdContent(flag,id,vipFlags)
 		else:
 			return 	{}		
-	def fhdContent(self,flag,id,vipFlags):
-		self.login()
+	def fhdContent(self,flag,id,vipFlags):		
+		if not self.login():
+			return {}
 		ids = id.split('+')
 		shareId = ids[0]
 		shareToken = ids[1]
@@ -64,8 +65,9 @@ class Spider(Spider):  # 元类 默认的元类 type
 			'header':newHeader
 		}
 		return result
-	def originContent(self,flag,id,vipFlags):
-		self.login()
+	def originContent(self,flag,id,vipFlags):		
+		if not self.login():
+			return {}
 		ids = id.split('+')
 		shareId = ids[0]
 		shareToken = ids[1]
@@ -316,7 +318,9 @@ class Spider(Spider):  # 元类 默认的元类 type
 
 		return [200, "application/octet-stream", action, content]
 
-	def localProxy(self,param):
+	def localProxy(self,param):		
+		if not self.login():
+			return {}
 		typ = param['type']
 		if typ == "m3u8":
 			return self.proxyM3U8(param)
@@ -391,13 +395,23 @@ class Spider(Spider):  # 元类 默认的元类 type
 		url = 'https://api.aliyundrive.com/token/refresh'
 		if len(self.authorization) == 0 or self.timeoutTick - self.localTime <= 600:
 			form = {
-				'refresh_token':'4acb3ad2f2254ba1b566279f7cd98ba3'
+				'refresh_token':'4acb3ad2f2254ba1b566279f7cd98ba3'				
 			}
+			try:
+				if len(self.extend) > 0:
+					form['refresh_token'] = self.extend
+			except Exception as e:
+				pass
 			rsp = requests.post(url,json = form,headers=self.header)
 			jo = json.loads(rsp.text)
-			self.authorization = jo['token_type'] + ' ' + jo['access_token']
-			self.expiresIn = int(jo['expires_in'])
-			self.timeoutTick = self.localTime + self.expiresIn
+			if rsp.status_code == 200:
+				self.authorization = jo['token_type'] + ' ' + jo['access_token']
+				self.expiresIn = int(jo['expires_in'])
+				self.timeoutTick = self.localTime + self.expiresIn
+				return True
+			return False
+		else:
+			return True
 
 			# print(self.authorization)
 			# print(self.timeoutTick)
